@@ -14,6 +14,7 @@ import traceback
 import win32api
 import win32con
 import win32gui
+import winxpgui
 
 WindowUtils = cef.WindowUtils()
 
@@ -36,6 +37,10 @@ def main(multi_threaded_message_loop):
         win32con.WM_ERASEBKGND: WindowUtils.OnEraseBackground
     }
     windowHandle = CreateWindow(title="pywin32 example", className="cefpython3_example", width=1024, height=768, windowProc=wndproc)
+    
+    # Set WS_EX_LAYERED on this window and make this window 50% alpha 
+    win32gui.SetWindowLong(windowHandle, win32con.GWL_EXSTYLE, win32gui.GetWindowLong(windowHandle, win32con.GWL_EXSTYLE) | win32con.WS_EX_LAYERED)
+    winxpgui.SetLayeredWindowAttributes(windowHandle, 0, 128, win32con.LWA_ALPHA);
     
     windowInfo = cef.WindowInfo()
     windowInfo.SetAsChild(windowHandle)

@@ -25,7 +25,8 @@ def main(multi_threaded_message_loop):
     check_versions()
     sys.excepthook = cef.ExceptHook  # To shutdown all CEF processes on error
     
-    settings = {"multi_threaded_message_loop": 1 if multi_threaded_message_loop else 0}
+    settings = {"multi_threaded_message_loop": 1 if multi_threaded_message_loop else 0,
+                "remote_debugging_port": 2020}
     cef.Initialize(settings)
     
     wndproc = {
@@ -95,9 +96,9 @@ def CreateWindow(title, className, width, height, windowProc):
     wndclass = win32gui.WNDCLASS()
     wndclass.hInstance = win32api.GetModuleHandle(None)
     wndclass.lpszClassName = className
-    wndclass.style = win32con.CS_VREDRAW | win32con.CS_HREDRAW
+    wndclass.style = win32con.CS_VREDRAW | win32con.CS_HREDRAW | win32con.CS_OWNDC
     # win32con.CS_GLOBALCLASS
-    wndclass.hbrBackground = win32con.COLOR_WINDOW
+    wndclass.hbrBackground = win32gui.GetStockObject(win32con.BLACK_BRUSH) # win32con.COLOR_WINDOW
     wndclass.hCursor = win32gui.LoadCursor(0, win32con.IDC_ARROW)
     wndclass.lpfnWndProc = windowProc
     atomClass = win32gui.RegisterClass(wndclass)
@@ -112,7 +113,7 @@ def CreateWindow(title, className, width, height, windowProc):
     if ypos < 0: ypos = 0
     
     windowHandle = win32gui.CreateWindow(className, title, 
-                                         win32con.WS_OVERLAPPEDWINDOW | win32con.WS_CLIPCHILDREN | win32con.WS_VISIBLE,
+                                         win32con.WS_EX_LAYERED | win32con.WS_VISIBLE,
                                          xpos, ypos, width, height, # xpos, ypos, width, height
                                          0, 0, wndclass.hInstance, None)
     

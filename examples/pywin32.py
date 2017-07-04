@@ -9,7 +9,6 @@ import os
 import platform
 import sys
 import time
-import traceback
 
 import win32api
 import win32con
@@ -38,16 +37,26 @@ def main(multi_threaded_message_loop):
     }
     windowHandle = CreateWindow(title="pywin32 example", className="cefpython3_example", width=1024, height=768, windowProc=wndproc)
     
-    # Set WS_EX_LAYERED on this window and make this window 50% alpha 
+    """
+    # Testing window opacity
+    # Set WS_EX_LAYERED on this window and make this window 50% alpha
     win32gui.SetWindowLong(windowHandle, win32con.GWL_EXSTYLE, win32gui.GetWindowLong(windowHandle, win32con.GWL_EXSTYLE) | win32con.WS_EX_LAYERED)
     winxpgui.SetLayeredWindowAttributes(windowHandle, 0, 128, win32con.LWA_ALPHA);
+    """
+    SetTransparentBackground(windowHandle, True)
     
     windowInfo = cef.WindowInfo()
     windowInfo.SetAsChild(windowHandle)
+    windowInfo.SetTransparentPainting(True)
     
     if(multi_threaded_message_loop):
+        
+        browserSettings = {"web_security_disabled": 1,
+                           "file_access_from_file_urls_allowed": 1,
+                           "universal_access_from_file_urls_allowed": 1}
+        
         # when using multi-threaded message loop, CEF's UI thread is no more application's main thread
-        cef.PostTask(cef.TID_UI, _createBrowserInUiThread, windowInfo, {}, "https://www.google.com/")
+        cef.PostTask(cef.TID_UI, _createBrowserInUiThread, windowInfo, browserSettings, "file:///D:/tests/cefpython/examples/resources/transparentBackground.html")
         win32gui.PumpMessages()
         
     else:
@@ -67,8 +76,7 @@ def check_versions():
 def _createBrowserInUiThread(windowInfo, settings, url):
     
     assert(cef.IsThread(cef.TID_UI))
-    browser = cef.CreateBrowserSync(windowInfo, settings={},
-                                    url="https://www.google.com/")
+    browser = cef.CreateBrowserSync(windowInfo, settings, url)
 
 
 def CloseWindow(windowHandle, message, wparam, lparam):
@@ -116,6 +124,36 @@ def GetPywin32Version():
     pth = distutils.sysconfig.get_python_lib(plat_specific=1)
     ver = open(os.path.join(pth, "pywin32.version.txt")).read().strip()
     return ver
+
+
+def SetTransparentBackground(windowHandle, transparent):
+    
+    import ctypes
+    dwmapi = ctypes.windll.dwmapi
+    gdi32 = ctypes.windll.gdi32
+    
+    # SetTransparentBackground needs Win8+.    
+    if(dwmapi is None) or (gdi32 is None):
+        return
+    
+    import ctypes.wintypes
+    class _DWM_BLURBEHIND(ctypes.Structure):
+        _fields_=[('dwFlags',                ctypes.wintypes.DWORD),
+                  ('fEnable',                ctypes.wintypes.BOOL),
+                  ('hRgnBlur',               ctypes.wintypes.HANDLE), # HRGN
+                  ('fTransitionOnMaximized', ctypes.wintypes.BOOL)]
+    
+    blurBehindConfig = _DWM_BLURBEHIND()
+    hRgn = gdi32.CreateRectRgn(0, 0, -1, -1)
+    
+    _DWM_BB_ENABLE     = 0x00000001  # fEnable has been specified
+    _DWM_BB_BLURREGION = 0x00000002  # hRgnBlur has been specified
+    
+    blurBehindConfig.dwFlags = _DWM_BB_ENABLE | _DWM_BB_BLURREGION;
+    blurBehindConfig.hRgnBlur = hRgn;
+    blurBehindConfig.fEnable = transparent;
+    
+    return dwmapi.DwmEnableBlurBehindWindow(windowHandle, ctypes.byref(blurBehindConfig))
 
 
 if __name__ == '__main__':

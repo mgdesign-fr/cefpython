@@ -42,7 +42,7 @@ def main(multi_threaded_message_loop):
     # Testing window opacity
     # Set WS_EX_LAYERED on this window and make this window 50% alpha
     win32gui.SetWindowLong(windowHandle, win32con.GWL_EXSTYLE, win32gui.GetWindowLong(windowHandle, win32con.GWL_EXSTYLE) | win32con.WS_EX_LAYERED)
-    winxpgui.SetLayeredWindowAttributes(windowHandle, 0, 128, win32con.LWA_ALPHA);
+    winxpgui.SetLayeredWindowAttributes(windowHandle, 0, 128, win32con.LWA_ALPHA)
     """
     SetTransparentBackground(windowHandle, True)
     
@@ -52,9 +52,17 @@ def main(multi_threaded_message_loop):
     
     if(multi_threaded_message_loop):
         
+        # NOTE(jeff) cefpython is using cef branch 2987 (chrome 57). For background color paramn, the docs says:
+        # Opaque background color used for accelerated content. By default the background color will be white. Only the RGB compontents of the specified value will be used. The alpha component must greater than 0 to enable use of the background color but will be otherwise ignored.
+        # BUT for the last branch, the comment had been changed to (in commit https://bitbucket.org/chromiumembedded/cef/commits/3f71138d64586d774f645a6db5283b5205ea9df4):
+        # Background color used for the browser before a document is loaded and when no document color is specified. The alpha component must be either fully opaque (0xFF) or fully transparent 
+        # (0x00). If the alpha component is fully opaque then the RGB components will be used as the background color. If the alpha component is fully transparent for a windowed browser then the 
+        # default value of opaque white be used. If the alpha component is fully transparent for a windowless (off-screen) browser then transparent painting will be enabled.
+        # So it seem transparent windows will not be supported neither in next version of cefpython...
         browserSettings = {"web_security_disabled": 1,
                            "file_access_from_file_urls_allowed": 1,
-                           "universal_access_from_file_urls_allowed": 1}
+                           "universal_access_from_file_urls_allowed": 1,
+                           "background_color": 0xFF0000FF}
         
         # when using multi-threaded message loop, CEF's UI thread is no more application's main thread
         cef.PostTask(cef.TID_UI, _createBrowserInUiThread, windowInfo, browserSettings, "file:///D:/tests/cefpython/examples/resources/transparentBackground.html")
@@ -150,9 +158,9 @@ def SetTransparentBackground(windowHandle, transparent):
     _DWM_BB_ENABLE     = 0x00000001  # fEnable has been specified
     _DWM_BB_BLURREGION = 0x00000002  # hRgnBlur has been specified
     
-    blurBehindConfig.dwFlags = _DWM_BB_ENABLE | _DWM_BB_BLURREGION;
-    blurBehindConfig.hRgnBlur = hRgn;
-    blurBehindConfig.fEnable = transparent;
+    blurBehindConfig.dwFlags = _DWM_BB_ENABLE | _DWM_BB_BLURREGION
+    blurBehindConfig.hRgnBlur = hRgn
+    blurBehindConfig.fEnable = transparent
     
     return dwmapi.DwmEnableBlurBehindWindow(windowHandle, ctypes.byref(blurBehindConfig))
 
